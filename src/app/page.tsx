@@ -7,11 +7,7 @@ import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Header from '@cloudscape-design/components/header';
 import Tabs from '@cloudscape-design/components/tabs';
-import Alert from '@cloudscape-design/components/alert';
-import ColumnLayout from '@cloudscape-design/components/column-layout';
-
 import YamlEditor from './components/YamlEditor';
-import DateSelector from './components/DateSelector';
 import DisruptionCalendar from './components/DisruptionCalendar';
 import BudgetSummary from './components/BudgetSummary';
 import { NodePool } from './types/karpenter';
@@ -37,7 +33,6 @@ export default function Home() {
               </SpaceBetween>
             }
           >
-            <ColumnLayout columns={2}>
               <Container>
                 <SpaceBetween size="l">
                   <Header
@@ -50,21 +45,6 @@ export default function Home() {
                 </SpaceBetween>
               </Container>
 
-              <Container>
-                <SpaceBetween size="l">
-                  <Header
-                    variant="h2"
-                    description="Select a date to see when disruptions are allowed or blocked"
-                  >
-                    Selected Date (UTC)
-                  </Header>
-                  <DateSelector
-                    selectedDate={selectedDate}
-                    onChange={setSelectedDate}
-                  />
-                </SpaceBetween>
-              </Container>
-            </ColumnLayout>
 
             <Tabs
               activeTabId={activeTabId}

@@ -11,6 +11,7 @@
   "dependencies": {
     "@cloudscape-design/components": "^3.0.919",
     "@cloudscape-design/global-styles": "^1.0.38",
+    "@schedule-x/events-service": "^2.21.1",
     "@schedule-x/react": "^2.21.2",
     "@schedule-x/theme-default": "^2.21.1",
     "ace-builds": "^1.39.0",
