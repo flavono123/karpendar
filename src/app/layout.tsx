@@ -16,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${pretendard.variable} ${notoSans.variable} ${notoSansKR.variable} antialiased`}
+        // className={`${pretendard.variable} ${notoSans.variable} ${notoSansKR.variable} antialiased`}
       >
         {children}
       </body>

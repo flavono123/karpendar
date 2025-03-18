@@ -1,149 +1,159 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useCalendarApp, ScheduleXCalendar } from '@schedule-x/react';
-import { createViewDay, createViewWeek, createViewMonthGrid, CalendarEventExternal } from '@schedule-x/calendar';
+import {
+  createViewDay,
+  createViewWeek,
+  createViewMonthGrid,
+  createViewMonthAgenda,
+  toDateString,
+} from '@schedule-x/calendar';
 import { createEventsServicePlugin } from '@schedule-x/events-service';
+import { createEventModalPlugin } from '@schedule-x/event-modal';
 import '@schedule-x/theme-default/dist/index.css';
 import Box from '@cloudscape-design/components/box';
-import { NodePool } from '../types/karpenter';
-import { generateEventsFromCron } from '../utils/cronParser';
-import { humanReadableBudget } from '../utils/budgetHelpers';
-import dayjs from 'dayjs';
 
 import './DisruptionCalendar.css';
+import { DisruptionBudget } from '../types/karpenter';
+import { generateEventsFromBudget } from '../utils/cronParser';
+import { createDateTimeIndicatorPlugin } from '../plugins/datetime-indicator-plugin';
+import '../plugins/datetime-indicator.css';
+
+import * as awsui from '@cloudscape-design/design-tokens/index.js';
+import { startOfMonth, endOfMonth } from 'date-fns';
+import { preventDefault } from 'ace-builds-internal/lib/event';
+import { StatusIndicator } from '@cloudscape-design/components';
 
 interface DisruptionCalendarProps {
-  nodePool: NodePool | null;
-  selectedDate: Date;
+  budgets: DisruptionBudget[];
 }
 
-const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ nodePool, selectedDate }) => {
-  // Create ref for the events plugin to ensure it persists between renders
+const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
+  const today = new Date();
   const eventsPluginRef = useRef(createEventsServicePlugin());
-//   const [eventsReady, setEventsReady] = useState(false);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEventExternal[]>([]);
+  const datetimeIndicatorPluginRef = useRef(createDateTimeIndicatorPlugin());
+  const [visiableRange, setVisiableRange] = useState<{
+    start: Date;
+    end: Date;
+  }>({
+    start: startOfMonth(today),
+    end: endOfMonth(today),
+  });
 
-  // Create calendar configuration first
   const calendarApp = useCalendarApp({
-    // Set default date to selected date
-    selectedDate: selectedDate.toISOString().split('T')[0],
-
-    // Define available views
+    selectedDate: toDateString(new Date()),
     views: [
       createViewDay(),
       createViewWeek(),
-      createViewMonthGrid()
+      createViewMonthGrid(),
+      createViewMonthAgenda(),
     ],
-
-    // Include the events plugin - use the ref to ensure stability
-    plugins: [eventsPluginRef.current],
-
-    // Add initial events (empty array, we'll update later)
+    plugins: [
+      eventsPluginRef.current,
+      createEventModalPlugin(),
+      datetimeIndicatorPluginRef.current,
+    ],
     events: [],
-
-    // Translations and formatting
     locale: 'en-US',
+    calendars: {
+      calendar1: {
+        colorName: 'blue',
+        lightColors: {
+          main: awsui.colorChartsPaletteCategorical1,
+          container: '#ddf4ff', // $color-charts-blue-1-1200 dark
+          onContainer: awsui.colorChartsPaletteCategorical6,
+        },
+      },
+      calendar2: {
+        colorName: 'pink',
+        lightColors: {
+          main: awsui.colorChartsPaletteCategorical2,
+          container: '#ffecf1', // $color-charts-pink-1200 dark
+          onContainer: awsui.colorChartsPaletteCategorical7,
+        },
+      },
+      calendar3: {
+        colorName: 'teal',
+        lightColors: {
+          main: awsui.colorChartsPaletteCategorical3,
+          container: '#d7f7f0', // $color-charts-teal-1200 dark
+          onContainer: awsui.colorChartsPaletteCategorical8,
+        },
+      },
+      calendar4: {
+        colorName: 'purple',
+        lightColors: {
+          main: awsui.colorChartsPaletteCategorical4,
+          container: '#f5edff', // $color-charts-purple-1200
+          onContainer: awsui.colorChartsPaletteCategorical9,
+        },
+      },
+      calendar5: {
+        colorName: 'orange',
+        lightColors: {
+          main: awsui.colorChartsPaletteCategorical5,
+          container: '#ffede2', // $color-charts-green-1200
+          onContainer: awsui.colorChartsPaletteCategorical10,
+        },
+      },
+    },
+    callbacks: {
+      onRangeUpdate: range => {
+        setVisiableRange({
+          start: new Date(range.start),
+          end: new Date(range.end),
+        });
+      },
+      onClickDateTime: dateTime => {
+        const datetimeIndicator = datetimeIndicatorPluginRef.current;
+        datetimeIndicator.setDatetime(new Date(dateTime));
+      },
+      onEventClick: calendarEvent => {
+        const datetimeIndicator = datetimeIndicatorPluginRef.current;
+        const eventStart = new Date(calendarEvent.start);
+        const eventEnd = new Date(calendarEvent.end);
+        const middleTime = new Date(
+          (eventStart.getTime() + eventEnd.getTime()) / 2
+        );
+        datetimeIndicator.setDatetime(middleTime);
+      },
+    },
   });
 
-  // Process events from nodePool (cron expressions)
   useEffect(() => {
-    if (!nodePool?.spec?.disruption?.budgets) {
+    if (!budgets) {
       return;
     }
 
-    // Generate events for the calendar based on cron expressions
-    const generatedEvents: CalendarEventExternal[] = [];
-    const { budgets } = nodePool.spec.disruption;
-
-    // Generate start date (beginning of week) and end date (end of week)
-    const startDate = new Date(selectedDate);
-    startDate.setDate(startDate.getDate() - startDate.getDay()); // Go to beginning of week (Sunday)
-    startDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 7); // End of week
-
-    // Convert cron-based events to Schedule-X format
-    budgets
-      .filter(budget => budget.schedule)
-      .forEach((budget, index) => {
-        const budgetEvents = generateEventsFromCron(budget, startDate, endDate);
-
-        budgetEvents.forEach((event, eventIndex) => {
-          const isZeroNodes = event.resource?.nodes === '0';
-
-          generatedEvents.push({
-            id: `budget-${index}-event-${eventIndex}`,
-            title: `${humanReadableBudget(budget)} - Nodes: ${event.resource?.nodes || '0'}`,
-            start: dayjs(event.start).format('YYYY-MM-DD HH:mm'),
-            end: dayjs(event.end).format('YYYY-MM-DD HH:mm'),
-            color: isZeroNodes ? '#D13212' : '#0972D3', // AWS colors
-            editable: false, // Disable editing/dragging
-            description: JSON.stringify(event.resource?.budget, null, 2),
-            allDay: false
-          });
-        });
-      });
-
-    // Save the generated events
-    setCalendarEvents(generatedEvents);
-    console.log('Generated events:', generatedEvents);
-  }, [nodePool, selectedDate]);
-
-  // Apply events to calendar AFTER it's fully initialized
-  useEffect(() => {
-    // Skip if calendar or events aren't ready
-    // // if (!calendarApp || !eventsReady || calendarEvents.length === 0) {
-    //   console.log('Waiting for calendar initialization or events:', {
-    //     calendarReady: !!calendarApp,
-    //     eventsReady,
-    //     eventsCount: calendarEvents.length
-    //   });
-    //   return;
-    // }
-
-    console.log('Attempting to set calendar events');
-
-    // Try both methods for setting events
     try {
-      // METHOD 1: Direct plugin access
-      console.log('Setting events via plugin directly');
       const plugin = eventsPluginRef.current;
-    //   if (plugin && typeof plugin.set === 'function') {
-        plugin.set(calendarEvents);
-        console.log('Events set via plugin successfully');
-    //   } else {
-    //     console.warn('Plugin set method not available, trying calendar.events');
-    //   }
-
-      // METHOD 2: Calendar events API
-    //   if (calendarApp?.events && typeof calendarApp.events.set === 'function') {
-    //     console.log('Setting events via calendarApp.events');
-    //     calendarApp.events.set(calendarEvents);
-    //     console.log('Events set via calendarApp.events successfully');
-    //   }
+      const events = budgets.flatMap((budget, index) =>
+        generateEventsFromBudget(budget, index, visiableRange)
+      );
+      plugin.set(events);
     } catch (error) {
       console.error('Error setting events:', error);
     }
-  }, [calendarApp, calendarEvents]);
+  }, [calendarApp, budgets, visiableRange]);
 
   if (!calendarApp) {
-    return <div>Loading calendar...</div>;
+    return (
+      <Box padding="m">
+        <StatusIndicator type="loading">Loading calendar...</StatusIndicator>
+      </Box>
+    );
   }
 
   return (
     <Box padding="m">
-      <div style={{
-        height: 500,
-        maxHeight: '70vh',
-        overflow: 'auto',
-        width: '100%'
-      }}>
-        <ScheduleXCalendar calendarApp={calendarApp} />
-      </div>
-      <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-        {calendarEvents.length > 0 ?
-          `Showing ${calendarEvents.length} budget events` :
-          'No disruption budget events to display'}
+      <div id="calendar-container">
+        <ScheduleXCalendar
+          calendarApp={calendarApp}
+          //   customComponents={{
+          //     eventModal: () => {
+          //       return <div>Hello</div>;
+          //     },
+          //   }}
+        />
       </div>
     </Box>
   );

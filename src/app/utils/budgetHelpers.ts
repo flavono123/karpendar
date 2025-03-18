@@ -1,8 +1,9 @@
-import { DisruptionBudget, DisruptionReason } from "../types/karpenter";
-import { describeCronSchedule, parseDuration } from "./cronParser";
+import parse from 'parse-duration';
+import { DisruptionBudget } from '../types/karpenter';
+import { describeCronSchedule } from './cronParser';
 
 export function describeBudget(budget: DisruptionBudget): string {
-  const { nodes, reasons, schedule, duration } = budget;
+  const { nodes, schedule, duration } = budget;
   let description = '';
 
   // Node description
@@ -13,12 +14,7 @@ export function describeBudget(budget: DisruptionBudget): string {
   }
 
   // Reasons
-  if (reasons?.length) {
-    const reasonsStr = reasons.join(', ');
-    description += ` for ${reasonsStr}`;
-  } else {
-    description += ` for all reasons`;
-  }
+  description += ` for ${reasonString(budget)}`;
 
   // Schedule
   if (schedule) {
@@ -28,7 +24,7 @@ export function describeBudget(budget: DisruptionBudget): string {
 
   // Duration
   if (duration) {
-    const minutes = parseDuration(duration);
+    const minutes = parse(duration, 'm') || 0;
     const hours = Math.floor(minutes / 60);
     const remainingMins = minutes % 60;
 
@@ -45,27 +41,6 @@ export function describeBudget(budget: DisruptionBudget): string {
   }
 
   return description;
-}
-
-export function shouldBlockDisruption(
-  budgets: DisruptionBudget[],
-  reason: DisruptionReason,
-  currentTime: Date
-): boolean {
-  // Find budgets that apply to the given reason and time
-  const applicableBudgets = budgets.filter(budget => {
-    // If budget has no reasons specified, it applies to all
-    const appliesToReason = !budget.reasons || budget.reasons.includes(reason);
-
-    // If there's a schedule, check if it applies to the current time
-    // This is simplified - a real implementation would need to check if the time
-    // falls within any scheduled window based on the cron expression
-
-    return appliesToReason;
-  });
-
-  // Check if any applicable budget has nodes=0 (blocks all disruptions)
-  return applicableBudgets.some(budget => budget.nodes === '0');
 }
 
 export function humanReadableBudget(budget: DisruptionBudget): string {
@@ -91,7 +66,7 @@ export function humanReadableBudget(budget: DisruptionBudget): string {
 
     // Add duration if provided
     if (budget.duration) {
-      const minutes = parseDuration(budget.duration);
+      const minutes = parse(budget.duration, 'm') || 0;
       const hours = Math.floor(minutes / 60);
       const remainingMins = minutes % 60;
 
@@ -114,4 +89,9 @@ export function humanReadableBudget(budget: DisruptionBudget): string {
   }
 
   return result;
+}
+
+export function reasonString(budget: DisruptionBudget): string {
+  if (!budget.reasons) return 'ALL(Drifted,Empty,Underutilized)';
+  return budget.reasons.join(', ');
 }

@@ -6,7 +6,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --font-family-base: var(--font-pretendard), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-base:
+    var(--font-pretendard), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,33 +29,4 @@ body {
   .text-balance {
     text-wrap: balance;
   }
-}
-
-/* Cloudscape customizations */
-:root {
-  --font-family-base: var(--font-pretendard);
-  --font-family-heading: var(--font-pretendard);
-  --font-family-body: var(--font-pretendard);
-  --font-family-monospace: var(--font-noto-sans);
-}
-
-.karpendar-app {
-  --font-family-base: var(--font-pretendard);
-  --font-family-heading: var(--font-pretendard);
-  --font-family-body: var(--font-pretendard);
-  --font-family-monospace: var(--font-noto-sans);
-}
-
-/* React Big Calendar customizations */
-.rbc-calendar {
-  font-family: var(--font-family-base) !important;
-}
-
-.rbc-event {
-  border-radius: 4px !important;
-  padding: 4px !important;
-}
-
-.rbc-today {
-  background-color: #f2f3f3 !important;
 }

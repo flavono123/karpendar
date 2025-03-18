@@ -1,83 +1,181 @@
-import {CronExpressionParser} from 'cron-parser';
-import { addMinutes } from 'date-fns';
+import { CronExpressionParser } from 'cron-parser';
+import {
+  addMinutes,
+  addYears,
+  differenceInMinutes,
+  endOfDay,
+  endOfYear,
+  interval,
+  startOfDay,
+  startOfYear,
+} from 'date-fns';
 import cronstrue from 'cronstrue';
-import { DisruptionBudget, CalendarEvent } from '../types/karpenter';
+import { DisruptionBudget } from '../types/karpenter';
+import { CalendarEvent, toDateTimeString } from '@schedule-x/calendar';
+import parse from 'parse-duration';
+import { describeBudget } from './budgetHelpers';
 
-// Parse a duration string like "10m" or "24h" into minutes
-export function parseDuration(duration: string): number {
-  if (!duration) return 0;
-
-  const value = parseInt(duration.slice(0, -1));
-  const unit = duration.slice(-1);
-
-  switch (unit) {
-    case 'm': return value; // minutes
-    case 'h': return value * 60; // hours to minutes
-    case 'd': return value * 24 * 60; // days to minutes
-    default: return 0;
-  }
-}
-
-// Convert special macros to cron expressions
-function expandMacro(schedule: string): string {
-  switch (schedule) {
-    case '@yearly':
-    case '@annually': return '0 0 1 1 *';
-    case '@monthly': return '0 0 1 * *';
-    case '@weekly': return '0 0 * * 0';
-    case '@daily': return '0 0 * * *';
-    case '@hourly': return '0 * * * *';
-    default: return schedule;
-  }
-}
-
-// Parse a cron expression and generate events for the given date range
-export function generateEventsFromCron(
+/**
+ * generate rrule events from the disruption budgets
+ * @param budget - The disruption budget to generate events for
+ * @param index - The index of the budget in NodePool
+ * @returns An array of CalendarEvent objects
+ */
+export function generateEventsFromBudget(
   budget: DisruptionBudget,
-  startDate: Date,
-  endDate: Date,
-  daysToGenerate = 7
+  index: number,
+  range: {
+    start: Date;
+    end: Date;
+  }
 ): CalendarEvent[] {
-  if (!budget.schedule) return [];
+  // edge1:
+  if (!budget) return [];
+
+  const id = `budget-${index}`;
+  const title = `budget ${index} ${budget.nodes}`;
+  const calendarId = `calendar${(index % 5) + 1}`;
+  const startDate = range.start;
+  const endDate = range.end;
+  const description = describeBudget(budget);
+
+  const infiniteEvent = {
+    id,
+    title,
+    // HACK: for day view as an infinite event
+    start: toDateTimeString(addMinutes(startDate, -1)),
+    end: toDateTimeString(addMinutes(endDate, 1)),
+    description,
+    calendarId,
+  };
+  // edge2: for all time budget(without a schedule and a duration)
+  if (!budget.schedule) return [infiniteEvent];
+  if (!validateSchedule(budget.schedule)) return [];
+  const duration = parse(budget.duration, 'm') || 0;
+  const cronInterval = getCronInterval(budget.schedule);
+
+  // edge3: duration is over the schedule interval(naive)
+  if (duration > cronInterval) return [infiniteEvent];
 
   const events: CalendarEvent[] = [];
-  const cronExpression = expandMacro(budget.schedule);
 
+  const nextInterval = CronExpressionParser.parse(budget.schedule);
+  const prevInterval = CronExpressionParser.parse(budget.schedule);
+
+  // For next occurrences (forward iteration)
+  for (const next of nextInterval) {
+    if (next.toDate() > endDate) break;
+    events.push(
+      ...eventsByDuration(
+        id,
+        title,
+        description,
+        next.toDate(),
+        addMinutes(next.toDate(), duration),
+        duration,
+        calendarId
+      )
+    );
+  }
+
+  // For previous occurrences (backward iteration)
+  let prev = prevInterval.prev();
+  while (prev && prev.toDate() > startDate) {
+    events.push(
+      ...eventsByDuration(
+        id,
+        title,
+        description,
+        prev.toDate(),
+        addMinutes(prev.toDate(), duration),
+        duration,
+        calendarId
+      )
+    );
+    prev = prevInterval.prev();
+  }
+
+  return events;
+}
+
+/**
+ * return events by duration
+ * @param id - The id of events
+ * @param title - The title of events
+ * @param start - The start date
+ * @param end - The end date
+ * @param duration - The duration of the event
+ * @returns An array of CalendarEvent objects
+ */
+function eventsByDuration(
+  id: string,
+  title: string,
+  description: string,
+  start: Date,
+  end: Date,
+  duration: number,
+  calendarId: string
+): CalendarEvent[] {
+  const events: CalendarEvent[] = [];
+  // if duration is under 24h and start, end is in different date, split first and second
+  // first from start to end of the start date, and second from 'start of' end and end of duration
+  if (duration < 24 * 60 && start.getDate() !== end.getDate()) {
+    const first = {
+      id,
+      title,
+      start: toDateTimeString(start),
+      end: toDateTimeString(endOfDay(start)),
+      description,
+      calendarId,
+    };
+    const second = {
+      id,
+      title,
+      start: toDateTimeString(startOfDay(end)),
+      end: toDateTimeString(end),
+      description,
+      calendarId,
+    };
+    return [first, second];
+  } else {
+    return [
+      {
+        id,
+        title,
+        start: toDateTimeString(start),
+        end: toDateTimeString(end),
+        description,
+        calendarId,
+      },
+    ];
+  }
+}
+/**
+ * get the 'naive' cron interval
+ * @param schedule - The disruption budget to generate events for
+ * @returns the cron interval in minutes
+ */
+function getCronInterval(schedule: string): number {
+  const interval = CronExpressionParser.parse(schedule);
+  // negate from next minus to next next occurrence
+  return -differenceInMinutes(
+    interval.next().toDate(),
+    interval.next().toDate()
+  );
+}
+
+/**
+ * validate a schedule of budget as cron expression
+ * @param schedule - The schedule to validate
+ * @returns true if the schedule is valid, false otherwise
+ */
+function validateSchedule(schedule: string): boolean {
   try {
-    const interval = CronExpressionParser.parse(cronExpression);
-    const duration = parseDuration(budget.duration || '60m'); // Default to 60 minutes if not specified
-
-    // Get the next N occurrences
-    let nextDate = interval.next();
-    let count = 0;
-
-    while (count < 50 && nextDate.getTime() <= endDate.getTime()) {
-      const start = new Date(nextDate.toString());
-      const end = addMinutes(start, duration);
-
-      // Create event
-      const event: CalendarEvent = {
-        id: `budget-${count}-${start.getTime()}`,
-        title: budget.nodes === '0' ? 'No Disruptions Allowed' : `Disruptions: ${budget.nodes}`,
-        start,
-        end,
-        resource: {
-          reason: budget.reasons?.length === 1 ? budget.reasons[0] : 'All',
-          nodes: budget.nodes,
-          budget
-        }
-      };
-
-      events.push(event);
-
-      nextDate = interval.next();
-      count++;
-    }
-
-    return events;
+    CronExpressionParser.parse(schedule);
+    return true;
   } catch (error) {
-    console.error('Error parsing cron expression:', error);
-    return [];
+    console.error(`Error parsing schedule: ${schedule}`, error);
+    return false;
   }
 }
 
@@ -86,8 +184,7 @@ export function describeCronSchedule(schedule: string): string {
   if (!schedule) return '';
 
   try {
-    const expanded = expandMacro(schedule);
-    return cronstrue.toString(expanded);
+    return cronstrue.toString(schedule);
   } catch (error) {
     return `Invalid schedule: ${schedule}`;
   }

@@ -11,73 +11,76 @@ import YamlEditor from './components/YamlEditor';
 import DisruptionCalendar from './components/DisruptionCalendar';
 import BudgetSummary from './components/BudgetSummary';
 import { NodePool } from './types/karpenter';
+import { ColumnLayout, SplitPanel } from '@cloudscape-design/components';
+import I18nProvider from '@cloudscape-design/components/i18n';
+import messages from '@cloudscape-design/components/i18n/messages/all.all';
 
 export default function Home() {
   const [nodePool, setNodePool] = useState<NodePool | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [activeTabId, setActiveTabId] = useState('calendar');
+  const LOCALE = 'en';
 
   return (
-    <div className="karpendar-app">
-      <AppLayout
-        content={
-          <ContentLayout
-            header={
-              <SpaceBetween size="m">
-                <Header
-                  variant="h1"
-                  description="Visualize Karpenter NodePool Disruption Budgets in a human-readable format"
-                >
-                  Karpendar
-                </Header>
-              </SpaceBetween>
-            }
-          >
-              <Container>
-                <SpaceBetween size="l">
+    <div>
+      <I18nProvider locale={LOCALE} messages={[messages]}>
+        <AppLayout
+          content={
+            <ContentLayout
+              header={
+                <SpaceBetween size="m">
                   <Header
-                    variant="h2"
-                    description="Paste your NodePool YAML to visualize its disruption budgets"
+                    variant="h1"
+                    description="Visualize Karpenter NodePool Disruption Budgets in a human-readable format"
                   >
-                    NodePool Configuration
+                    Karpendar
                   </Header>
-                  <YamlEditor onChange={setNodePool} />
                 </SpaceBetween>
-              </Container>
-
-
-            <Tabs
-              activeTabId={activeTabId}
-              onChange={({ detail }) => setActiveTabId(detail.activeTabId)}
-              tabs={[
-                {
-                  id: 'calendar',
-                  label: 'Calendar View',
-                  content: (
-                    <DisruptionCalendar
-                      nodePool={nodePool}
-                      selectedDate={selectedDate}
-                    />
-                  ),
-                },
-                {
-                  id: 'summary',
-                  label: 'Budget Summary',
-                  content: (
-                    <BudgetSummary
-                      nodePool={nodePool}
-                      selectedDate={selectedDate}
-                    />
-                  ),
-                },
-              ]}
-            />
-          </ContentLayout>
-        }
-        toolsHide
-        contentType="default"
-        navigationHide
-      />
+              }
+            >
+              <Tabs
+                activeTabId={activeTabId}
+                onChange={({ detail }) => setActiveTabId(detail.activeTabId)}
+                tabs={[
+                  {
+                    id: 'calendar',
+                    label: 'Calendar View',
+                    content: (
+                      <DisruptionCalendar
+                        budgets={nodePool?.spec?.disruption?.budgets || []}
+                      />
+                    ),
+                  },
+                  {
+                    id: 'summary',
+                    label: 'Budget Summary',
+                    content: <BudgetSummary nodePool={nodePool} />,
+                  },
+                ]}
+              />
+            </ContentLayout>
+          }
+          toolsHide
+          contentType="default"
+          navigationHide
+          splitPanel={
+            <SplitPanel header="Configuration">
+              <ColumnLayout>
+                <Container>
+                  <SpaceBetween size="l">
+                    <Header
+                      variant="h2"
+                      description="Paste your NodePool YAML to visualize its disruption budgets"
+                    >
+                      NodePool
+                    </Header>
+                    <YamlEditor onChange={setNodePool} />
+                  </SpaceBetween>
+                </Container>
+              </ColumnLayout>
+            </SplitPanel>
+          }
+        />
+      </I18nProvider>
     </div>
   );
 }

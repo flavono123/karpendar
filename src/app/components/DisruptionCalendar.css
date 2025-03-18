@@ -1,5 +1,14 @@
+/* https://schedule-x.dev/docs/calendar/theme#customizing-the-default-theme-colors */
+:root {
+  --sx-color-primary: #0972d3; /* AWS UI blue */
+  --sx-color-on-primary: #ffffff;
+  --sx-color-primary-container: #e9ebed; /* AWS UI gray-100 */
+  --sx-color-on-primary-container: #0972d3;
+}
+
 .sx-react-calendar-wrapper {
-    width: 100%;
-    height: 800px;
-    max-height:90vh;
+  width: 1200px;
+  max-width: 100vw;
+  height: 800px;
+  max-height: 90vh;
 }

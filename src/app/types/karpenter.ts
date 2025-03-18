@@ -8,16 +8,10 @@ export interface DisruptionBudget {
 }
 
 export interface NodePoolDisruption {
-  consolidationPolicy?: 'WhenEmpty' | 'WhenEmptyOrUnderutilized';
   budgets: DisruptionBudget[];
 }
 
 export interface NodePoolSpec {
-  template?: {
-    spec?: {
-      expireAfter?: string;
-    };
-  };
   disruption: NodePoolDisruption;
 }
 

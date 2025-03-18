@@ -13,37 +13,20 @@ spec:
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     budgets:
-    - nodes: "20%"
-      reasons:
-      - "Empty"
-      - "Drifted"
-    - nodes: "5"
-    - nodes: "0"
-      schedule: "@daily"
-      duration: 10m
-      reasons:
-      - "Underutilized"
+      - nodes: "1"
+      - duration: 1h
+        nodes: "0"
+        schedule: 0 15 * * *
+      - duration: 1h
+        nodes: "2"
+        schedule: 0 16 * * *
+      - duration: 1h
+        nodes: "3"
+        schedule: 0 17 * * *
+      - duration: 1h
+        nodes: "5"
+        schedule: 0 18 * * sun-thu
 `;
-
-const i18nStrings = {
-  loadingState: 'Loading code editor',
-  errorState: 'There was an error loading the code editor.',
-  errorStateRecovery: 'Retry',
-  editorGroupAriaLabel: 'Code editor',
-  statusBarGroupAriaLabel: 'Status bar',
-  cursorPosition: (row: number, column: number) => `Ln ${row}, Col ${column}`,
-  errorsTab: 'Errors',
-  warningsTab: 'Warnings',
-  preferencesButtonAriaLabel: 'Preferences',
-  paneCloseButtonAriaLabel: 'Close',
-  preferencesModalHeader: 'Preferences',
-  preferencesModalCancel: 'Cancel',
-  preferencesModalConfirm: 'Confirm',
-  preferencesModalWrapLines: 'Wrap lines',
-  preferencesModalTheme: 'Theme',
-  preferencesModalLightThemes: 'Light themes',
-  preferencesModalDarkThemes: 'Dark themes',
-};
 
 interface YamlEditorProps {
   onChange: (nodePool: NodePool | null) => void;
@@ -88,7 +71,6 @@ const YamlEditor: React.FC<YamlEditorProps> = ({ onChange }) => {
         preferences={preferences}
         onPreferencesChange={({ detail }) => setPreferences(detail)}
         loading={loading}
-        i18nStrings={i18nStrings}
         themes={{ light: ['cloud_editor'], dark: ['cloud_editor_dark'] }}
       />
     </Box>
