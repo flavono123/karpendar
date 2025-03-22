@@ -1,19 +1,23 @@
 import { CronExpressionParser } from 'cron-parser';
 import {
   addMinutes,
-  addYears,
   differenceInMinutes,
   endOfDay,
-  endOfYear,
-  interval,
   startOfDay,
-  startOfYear,
 } from 'date-fns';
 import cronstrue from 'cronstrue';
 import { DisruptionBudget } from '../types/karpenter';
-import { CalendarEvent, toDateTimeString } from '@schedule-x/calendar';
+import {
+  CalendarEvent,
+  toDateString,
+  toDateTimeString,
+} from '@schedule-x/calendar';
 import parse from 'parse-duration';
-import { describeBudget } from './budgetHelpers';
+import {
+  describeBudget,
+  generateCalendarId,
+  generateLocation,
+} from './budgetHelpers';
 
 /**
  * generate rrule events from the disruption budgets
@@ -33,8 +37,10 @@ export function generateEventsFromBudget(
   if (!budget) return [];
 
   const id = `budget-${index}`;
-  const title = `budget ${index} ${budget.nodes}`;
-  const calendarId = `calendar${(index % 5) + 1}`;
+  const calendarId = generateCalendarId(budget);
+  const title = `[${index}]:${budget.nodes} for ${generateLocation(budget)}`;
+  // const people = [budget.nodes];
+  // const location = generateLocation(budget);
   const startDate = range.start;
   const endDate = range.end;
   const description = describeBudget(budget);
@@ -43,8 +49,10 @@ export function generateEventsFromBudget(
     id,
     title,
     // HACK: for day view as an infinite event
-    start: toDateTimeString(addMinutes(startDate, -1)),
-    end: toDateTimeString(addMinutes(endDate, 1)),
+    // people,
+    // location,
+    start: toDateString(addMinutes(startDate, -1)),
+    end: toDateString(addMinutes(endDate, 1)),
     description,
     calendarId,
   };
@@ -74,6 +82,8 @@ export function generateEventsFromBudget(
         addMinutes(next.toDate(), duration),
         duration,
         calendarId
+        // people,
+        // location
       )
     );
   }
@@ -90,6 +100,8 @@ export function generateEventsFromBudget(
         addMinutes(prev.toDate(), duration),
         duration,
         calendarId
+        // people,
+        // location
       )
     );
     prev = prevInterval.prev();
@@ -114,9 +126,10 @@ function eventsByDuration(
   start: Date,
   end: Date,
   duration: number,
-  calendarId: string
+  calendarId: string,
+  people?: string[],
+  location?: string
 ): CalendarEvent[] {
-  const events: CalendarEvent[] = [];
   // if duration is under 24h and start, end is in different date, split first and second
   // first from start to end of the start date, and second from 'start of' end and end of duration
   if (duration < 24 * 60 && start.getDate() !== end.getDate()) {
@@ -127,6 +140,8 @@ function eventsByDuration(
       end: toDateTimeString(endOfDay(start)),
       description,
       calendarId,
+      people,
+      location,
     };
     const second = {
       id,
@@ -135,6 +150,8 @@ function eventsByDuration(
       end: toDateTimeString(end),
       description,
       calendarId,
+      people,
+      location,
     };
     return [first, second];
   } else {
@@ -146,6 +163,8 @@ function eventsByDuration(
         end: toDateTimeString(end),
         description,
         calendarId,
+        people,
+        location,
       },
     ];
   }

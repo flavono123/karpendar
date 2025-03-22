@@ -16,21 +16,76 @@ import './DisruptionCalendar.css';
 import { DisruptionBudget } from '../types/karpenter';
 import { generateEventsFromBudget } from '../utils/cronParser';
 import { startOfMonth, endOfMonth } from 'date-fns';
-import {
-  StatusIndicator,
-  Container,
-  TextContent,
-} from '@cloudscape-design/components';
+import { StatusIndicator } from '@cloudscape-design/components';
 import { createDateTimeIndicatorWithCloudscapeModalPlugin } from '../plugins/datetime-indicator-with-modal-plugin';
 
 import '../plugins/datetime-indicator-with-modal-plugin.css';
 import * as awsui from '@cloudscape-design/design-tokens/index.js';
+
 interface DisruptionCalendarProps {
   budgets: DisruptionBudget[];
 }
 
 const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
   const today = new Date();
+  const calendars = {
+    all: {
+      colorName: 'blue',
+      lightColors: {
+        main: awsui.colorChartsPaletteCategorical1,
+        container: '#ddf4ff', // $color-charts-blue-1-1200 dark
+        onContainer: awsui.colorChartsPaletteCategorical6,
+      },
+    },
+    drifted: {
+      colorName: 'pink',
+      lightColors: {
+        main: awsui.colorChartsPaletteCategorical2,
+        container: '#ffecf1', // $color-charts-pink-1200 dark
+        onContainer: awsui.colorChartsPaletteCategorical7,
+      },
+    },
+    empty: {
+      colorName: 'teal',
+      lightColors: {
+        main: awsui.colorChartsPaletteCategorical3,
+        container: '#d7f7f0', // $color-charts-teal-1200 dark
+        onContainer: awsui.colorChartsPaletteCategorical8,
+      },
+    },
+    underutilized: {
+      colorName: 'purple',
+      lightColors: {
+        main: awsui.colorChartsPaletteCategorical4,
+        container: '#f5edff', // $color-charts-purple-1200 dark
+        onContainer: awsui.colorChartsPaletteCategorical9,
+      },
+    },
+    'drifted-empty': {
+      colorName: 'navy',
+      lightColors: {
+        main: awsui.colorChartsPaletteCategorical11,
+        container: '#caedfc', // $color-charts-blue-1-1100 dark
+        onContainer: awsui.colorChartsPaletteCategorical16,
+      },
+    },
+    'empty-underutilized': {
+      colorName: 'mauve',
+      lightColors: {
+        main: awsui.colorChartsPaletteCategorical22,
+        container: '#ffdfe8', // $color-charts-pink-1100 dark
+        onContainer: awsui.colorChartsPaletteCategorical27,
+      },
+    },
+    'drifted-underutilized': {
+      colorName: 'magenta',
+      lightColors: {
+        main: awsui.colorChartsPaletteCategorical24,
+        container: '#efe2ff', // $color-charts-purple-1100 dark
+        onContainer: awsui.colorChartsPaletteCategorical29,
+      },
+    },
+  };
   const eventsPluginRef = useRef(createEventsServicePlugin());
   const datetimeIndicatorPluginRef = useRef(
     createDateTimeIndicatorWithCloudscapeModalPlugin()
@@ -43,45 +98,6 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
     end: endOfMonth(today),
   });
 
-  const CustomTimeGridEvent = ({
-    calendarEvent,
-  }: {
-    calendarEvent: CalendarEvent;
-  }) => {
-    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      // Calculate relative Y position
-      const rect = e.currentTarget.getBoundingClientRect();
-      const relativeY = (e.clientY - rect.top) / rect.height;
-
-      // Calculate precise time based on position
-      const startTime = new Date(calendarEvent.start).getTime();
-      const endTime = new Date(calendarEvent.end).getTime();
-      const clickedTime = new Date(
-        startTime + (endTime - startTime) * relativeY
-      );
-
-      console.log('clickedTime', clickedTime);
-      // Call your handler with the calculated time
-      datetimeIndicatorPluginRef.current.setDatetime(clickedTime);
-
-      // Prevent default to avoid standard onEventClick
-      e.stopPropagation();
-    };
-
-    return (
-      <div
-        className="custom-event"
-        style={{ height: '100%' }}
-        onClick={handleClick}
-      >
-        <Container>
-          <TextContent>{calendarEvent.title}</TextContent>
-          {/* <Icon name="search" /> */}
-        </Container>
-      </div>
-    );
-  };
-
   const calendarApp = useNextCalendarApp({
     selectedDate: toDateString(new Date()),
     views: [
@@ -90,55 +106,10 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
       createViewMonthGrid(),
       createViewMonthAgenda(),
     ],
-    plugins: [
-      eventsPluginRef.current,
-      //   createEventModalPlugin(),
-      datetimeIndicatorPluginRef.current,
-    ],
+    plugins: [eventsPluginRef.current, datetimeIndicatorPluginRef.current],
     events: [],
     locale: 'en-US',
-    calendars: {
-      calendar1: {
-        colorName: 'blue', // all
-        lightColors: {
-          main: awsui.colorChartsPaletteCategorical1,
-          container: '#ddf4ff', // $color-charts-blue-1-1200 dark
-          onContainer: awsui.colorChartsPaletteCategorical6,
-        },
-      },
-      calendar2: {
-        colorName: 'pink', // empty
-        lightColors: {
-          main: awsui.colorChartsPaletteCategorical2,
-          container: '#ffecf1', // $color-charts-pink-1200 dark
-          onContainer: awsui.colorChartsPaletteCategorical7,
-        },
-      },
-      calendar3: {
-        colorName: 'teal', //  drift
-        lightColors: {
-          main: awsui.colorChartsPaletteCategorical3,
-          container: '#d7f7f0', // $color-charts-teal-1200 dark
-          onContainer: awsui.colorChartsPaletteCategorical8,
-        },
-      },
-      calendar4: {
-        colorName: 'purple', // underutilized
-        lightColors: {
-          main: awsui.colorChartsPaletteCategorical4,
-          container: '#f5edff', // $color-charts-purple-1200
-          onContainer: awsui.colorChartsPaletteCategorical9,
-        },
-      },
-      calendar5: {
-        colorName: 'orange', // TODO: REMOVE
-        lightColors: {
-          main: awsui.colorChartsPaletteCategorical5,
-          container: '#ffede2', // $color-charts-green-1200
-          onContainer: awsui.colorChartsPaletteCategorical10,
-        },
-      },
-    },
+    calendars,
     callbacks: {
       onRangeUpdate: range => {
         setVisiableRange({
@@ -149,9 +120,8 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
       onClickDateTime: dateTime => {
         const datetimeIndicator = datetimeIndicatorPluginRef.current;
         datetimeIndicator.setDatetime(new Date(dateTime));
-        // datetimeIndicator.toggleModal();
       },
-      onEventClick: (calendarEvent, e: any) => {
+      onEventClick: (calendarEvent: CalendarEvent, e: any) => {
         if (
           toDateString(new Date(calendarEvent.start)) !==
           toDateString(new Date(calendarEvent.end))
@@ -174,7 +144,6 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         );
 
         datetimeIndicator.setDatetime(clickedTime);
-        // datetimeIndicator.toggleModal();
       },
     },
   });
@@ -206,12 +175,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
   return (
     <Box padding="m">
       <div id="calendar-container">
-        <ScheduleXCalendar
-          calendarApp={calendarApp}
-          //   customComponents={{
-          //     timeGridEvent: CustomTimeGridEvent,
-          //   }}
-        />
+        <ScheduleXCalendar calendarApp={calendarApp} />
       </div>
     </Box>
   );

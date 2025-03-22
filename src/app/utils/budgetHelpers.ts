@@ -1,6 +1,7 @@
 import parse from 'parse-duration';
 import { DisruptionBudget } from '../types/karpenter';
 import { describeCronSchedule } from './cronParser';
+import { sort } from 'rrule/dist/esm/dateutil';
 
 export function describeBudget(budget: DisruptionBudget): string {
   const { nodes, schedule, duration } = budget;
@@ -14,7 +15,7 @@ export function describeBudget(budget: DisruptionBudget): string {
   }
 
   // Reasons
-  description += ` for ${reasonString(budget)}`;
+  description += ` for ${generateLocation(budget)}`;
 
   // Schedule
   if (schedule) {
@@ -91,7 +92,31 @@ export function humanReadableBudget(budget: DisruptionBudget): string {
   return result;
 }
 
-export function reasonString(budget: DisruptionBudget): string {
-  if (!budget.reasons) return 'ALL(Drifted,Empty,Underutilized)';
-  return budget.reasons.join(', ');
+// for debugging
+export function generateLocation(budget: DisruptionBudget): string {
+  if (!budget.reasons) return 'All';
+  const reasonString = budget.reasons
+    .map(
+      reason => reason.charAt(0).toUpperCase() + reason.slice(1).toLowerCase()
+    )
+    .sort()
+    .join(', ');
+  if (reasonString === 'Drifted, Empty, Underutilized') {
+    return 'All';
+  }
+  return reasonString;
+}
+
+export function generateCalendarId(budget: DisruptionBudget): string {
+  if (!budget.reasons) return 'all';
+  const calendarId = budget.reasons
+    .map(reason => reason.toLowerCase())
+    .sort()
+    .join('-');
+
+  if (calendarId == 'drifted-empty-underutilized') {
+    return 'all';
+  }
+
+  return calendarId;
 }

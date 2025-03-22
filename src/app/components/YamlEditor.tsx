@@ -5,32 +5,18 @@ import { parseYaml } from '../utils/yamlParser';
 import { NodePool } from '../types/karpenter';
 import { aceLoader } from './ace';
 
-const DEFAULT_YAML = `apiVersion: karpenter.sh/v1
-kind: NodePool
-metadata:
-  name: default
-spec:
-  disruption:
-    consolidationPolicy: WhenEmptyOrUnderutilized
-    budgets:
-      - nodes: "1"
-      - duration: 1h
-        nodes: "0"
-        schedule: 0 15 * * *
-      - duration: 1h
-        nodes: "2"
-        schedule: 0 16 * * *
-      - duration: 1h
-        nodes: "3"
-        schedule: 0 17 * * *
-`;
-
 interface YamlEditorProps {
   onChange: (nodePool: NodePool | null) => void;
+  initialValue: string;
+  onYamlChange?: (yaml: string) => void;
 }
 
-const YamlEditor: React.FC<YamlEditorProps> = ({ onChange }) => {
-  const [yaml, setYaml] = useState(DEFAULT_YAML);
+const YamlEditor: React.FC<YamlEditorProps> = ({
+  onChange,
+  initialValue,
+  onYamlChange,
+}) => {
+  const [yaml, setYaml] = useState(initialValue);
   const [preferences, setPreferences] = useState<any>({
     theme: 'cloud_editor',
   });
@@ -48,15 +34,25 @@ const YamlEditor: React.FC<YamlEditorProps> = ({ onChange }) => {
       });
   }, []);
 
+  // Update yaml if initialValue changes and is different from current yaml
+  useEffect(() => {
+    if (initialValue !== yaml) {
+      setYaml(initialValue);
+    }
+  }, [initialValue]);
+
   // Parse the YAML whenever it changes
   useEffect(() => {
     try {
       const nodePool = parseYaml(yaml);
       onChange(nodePool);
+      if (onYamlChange) {
+        onYamlChange(yaml);
+      }
     } catch (err) {
       onChange(null);
     }
-  }, [yaml, onChange]);
+  }, [yaml, onChange, onYamlChange]);
 
   return (
     <Box padding="m">
