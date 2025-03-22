@@ -23,9 +23,6 @@ spec:
       - duration: 1h
         nodes: "3"
         schedule: 0 17 * * *
-      - duration: 1h
-        nodes: "5"
-        schedule: 0 18 * * sun-thu
 `;
 
 interface YamlEditorProps {

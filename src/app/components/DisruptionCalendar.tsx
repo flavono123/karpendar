@@ -1,28 +1,30 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useCalendarApp, ScheduleXCalendar } from '@schedule-x/react';
+import { useNextCalendarApp, ScheduleXCalendar } from '@schedule-x/react';
 import {
   createViewDay,
   createViewWeek,
   createViewMonthGrid,
   createViewMonthAgenda,
   toDateString,
+  CalendarEvent,
 } from '@schedule-x/calendar';
 import { createEventsServicePlugin } from '@schedule-x/events-service';
-import { createEventModalPlugin } from '@schedule-x/event-modal';
 import '@schedule-x/theme-default/dist/index.css';
 import Box from '@cloudscape-design/components/box';
 
 import './DisruptionCalendar.css';
 import { DisruptionBudget } from '../types/karpenter';
 import { generateEventsFromBudget } from '../utils/cronParser';
-import { createDateTimeIndicatorPlugin } from '../plugins/datetime-indicator-plugin';
-import '../plugins/datetime-indicator.css';
-
-import * as awsui from '@cloudscape-design/design-tokens/index.js';
 import { startOfMonth, endOfMonth } from 'date-fns';
-import { preventDefault } from 'ace-builds-internal/lib/event';
-import { StatusIndicator } from '@cloudscape-design/components';
+import {
+  StatusIndicator,
+  Container,
+  TextContent,
+} from '@cloudscape-design/components';
+import { createDateTimeIndicatorWithCloudscapeModalPlugin } from '../plugins/datetime-indicator-with-modal-plugin';
 
+import '../plugins/datetime-indicator-with-modal-plugin.css';
+import * as awsui from '@cloudscape-design/design-tokens/index.js';
 interface DisruptionCalendarProps {
   budgets: DisruptionBudget[];
 }
@@ -30,7 +32,9 @@ interface DisruptionCalendarProps {
 const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
   const today = new Date();
   const eventsPluginRef = useRef(createEventsServicePlugin());
-  const datetimeIndicatorPluginRef = useRef(createDateTimeIndicatorPlugin());
+  const datetimeIndicatorPluginRef = useRef(
+    createDateTimeIndicatorWithCloudscapeModalPlugin()
+  );
   const [visiableRange, setVisiableRange] = useState<{
     start: Date;
     end: Date;
@@ -39,7 +43,46 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
     end: endOfMonth(today),
   });
 
-  const calendarApp = useCalendarApp({
+  const CustomTimeGridEvent = ({
+    calendarEvent,
+  }: {
+    calendarEvent: CalendarEvent;
+  }) => {
+    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      // Calculate relative Y position
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeY = (e.clientY - rect.top) / rect.height;
+
+      // Calculate precise time based on position
+      const startTime = new Date(calendarEvent.start).getTime();
+      const endTime = new Date(calendarEvent.end).getTime();
+      const clickedTime = new Date(
+        startTime + (endTime - startTime) * relativeY
+      );
+
+      console.log('clickedTime', clickedTime);
+      // Call your handler with the calculated time
+      datetimeIndicatorPluginRef.current.setDatetime(clickedTime);
+
+      // Prevent default to avoid standard onEventClick
+      e.stopPropagation();
+    };
+
+    return (
+      <div
+        className="custom-event"
+        style={{ height: '100%' }}
+        onClick={handleClick}
+      >
+        <Container>
+          <TextContent>{calendarEvent.title}</TextContent>
+          {/* <Icon name="search" /> */}
+        </Container>
+      </div>
+    );
+  };
+
+  const calendarApp = useNextCalendarApp({
     selectedDate: toDateString(new Date()),
     views: [
       createViewDay(),
@@ -49,14 +92,14 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
     ],
     plugins: [
       eventsPluginRef.current,
-      createEventModalPlugin(),
+      //   createEventModalPlugin(),
       datetimeIndicatorPluginRef.current,
     ],
     events: [],
     locale: 'en-US',
     calendars: {
       calendar1: {
-        colorName: 'blue',
+        colorName: 'blue', // all
         lightColors: {
           main: awsui.colorChartsPaletteCategorical1,
           container: '#ddf4ff', // $color-charts-blue-1-1200 dark
@@ -64,7 +107,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         },
       },
       calendar2: {
-        colorName: 'pink',
+        colorName: 'pink', // empty
         lightColors: {
           main: awsui.colorChartsPaletteCategorical2,
           container: '#ffecf1', // $color-charts-pink-1200 dark
@@ -72,7 +115,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         },
       },
       calendar3: {
-        colorName: 'teal',
+        colorName: 'teal', //  drift
         lightColors: {
           main: awsui.colorChartsPaletteCategorical3,
           container: '#d7f7f0', // $color-charts-teal-1200 dark
@@ -80,7 +123,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         },
       },
       calendar4: {
-        colorName: 'purple',
+        colorName: 'purple', // underutilized
         lightColors: {
           main: awsui.colorChartsPaletteCategorical4,
           container: '#f5edff', // $color-charts-purple-1200
@@ -88,7 +131,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         },
       },
       calendar5: {
-        colorName: 'orange',
+        colorName: 'orange', // TODO: REMOVE
         lightColors: {
           main: awsui.colorChartsPaletteCategorical5,
           container: '#ffede2', // $color-charts-green-1200
@@ -106,15 +149,32 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
       onClickDateTime: dateTime => {
         const datetimeIndicator = datetimeIndicatorPluginRef.current;
         datetimeIndicator.setDatetime(new Date(dateTime));
+        // datetimeIndicator.toggleModal();
       },
-      onEventClick: calendarEvent => {
+      onEventClick: (calendarEvent, e: any) => {
+        if (
+          toDateString(new Date(calendarEvent.start)) !==
+          toDateString(new Date(calendarEvent.end))
+        ) {
+          return;
+        }
         const datetimeIndicator = datetimeIndicatorPluginRef.current;
-        const eventStart = new Date(calendarEvent.start);
-        const eventEnd = new Date(calendarEvent.end);
-        const middleTime = new Date(
-          (eventStart.getTime() + eventEnd.getTime()) / 2
+        const target = e.target as HTMLElement;
+        const rect = target.closest('.sx__event')?.getBoundingClientRect();
+        if (!rect) {
+          return;
+        }
+        const relativeY = (e.clientY - rect.top) / rect.height;
+
+        // Calculate precise time based on position
+        const startTime = new Date(calendarEvent.start).getTime();
+        const endTime = new Date(calendarEvent.end).getTime();
+        const clickedTime = new Date(
+          startTime + (endTime - startTime) * relativeY
         );
-        datetimeIndicator.setDatetime(middleTime);
+
+        datetimeIndicator.setDatetime(clickedTime);
+        // datetimeIndicator.toggleModal();
       },
     },
   });
@@ -149,9 +209,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         <ScheduleXCalendar
           calendarApp={calendarApp}
           //   customComponents={{
-          //     eventModal: () => {
-          //       return <div>Hello</div>;
-          //     },
+          //     timeGridEvent: CustomTimeGridEvent,
           //   }}
         />
       </div>
