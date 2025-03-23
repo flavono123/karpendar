@@ -27,12 +27,12 @@ spec:
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     budgets:
-      - nodes: "1"
       - duration: 4h
         nodes: "0"
-        schedule: 0 15 * * *
+        schedule: 0 15 * * mon-fri
         reasons:
           - drifted
+      - nodes: "1"
       - duration: 3h
         nodes: 30%
         schedule: 0 17 * * *

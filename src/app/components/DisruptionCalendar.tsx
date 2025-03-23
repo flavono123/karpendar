@@ -162,6 +162,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
 
     try {
       const plugin = eventsPluginRef.current;
+      //   debugger;
       const events = budgets.flatMap((budget, index) =>
         generateEvents(budget, index, visiableRange)
       );
@@ -169,7 +170,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
     } catch (error) {
       console.error('Error setting events:', error);
     }
-  }, [calendarApp, budgets, visiableRange]);
+  }, [budgets, visiableRange]);
 
   if (!calendarApp) {
     return (

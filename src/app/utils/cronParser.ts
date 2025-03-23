@@ -39,8 +39,6 @@ export function generateEvents(
   const id = `budget-${index}`;
   const calendarId = generateCalendarId(budget);
   const title = `[${index}]:${budget.nodes} for ${generateLocation(budget)}`;
-  // const people = [budget.nodes];
-  // const location = generateLocation(budget);
   const startDate = range.start;
   const endDate = range.end;
   const description = describeBudget(budget);
@@ -76,7 +74,7 @@ export function generateEvents(
 
   // For next occurrences (forward iteration)
   for (const next of nextInterval) {
-    if (next.toDate() > endDate) break;
+    if (next.toDate() >= endDate) break;
     events.push(
       ...generateEventsByDuration(
         id,
@@ -94,7 +92,7 @@ export function generateEvents(
 
   // For previous occurrences (backward iteration)
   let prev = prevInterval.prev();
-  while (prev && prev.toDate() > startDate) {
+  while (prev && prev.toDate() >= startDate) {
     events.push(
       ...generateEventsByDuration(
         id,
