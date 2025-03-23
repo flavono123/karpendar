@@ -1,4 +1,4 @@
-import { Alert, Button } from '@cloudscape-design/components';
+import { Alert, Button, TextContent } from '@cloudscape-design/components';
 import React from 'react';
 
 interface NodePoolAlertProps {

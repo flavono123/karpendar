@@ -1,7 +1,13 @@
 import parse from 'parse-duration';
-import { DisruptionBudget } from '../types/karpenter';
+import {
+  AtTimeBudget,
+  DisruptionBudget,
+  DisruptionReason,
+  NormalizedDisruptionReason,
+} from '../types/karpenter';
 import { describeCronSchedule } from './cronParser';
-import { sort } from 'rrule/dist/esm/dateutil';
+import { CronExpressionParser } from 'cron-parser';
+import { addMinutes, isWithinInterval } from 'date-fns';
 
 export function describeBudget(budget: DisruptionBudget): string {
   const { nodes, schedule, duration } = budget;
@@ -119,4 +125,130 @@ export function generateCalendarId(budget: DisruptionBudget): string {
   }
 
   return calendarId;
+}
+
+/**
+ * Determines which budgets are active at a specific datetime
+ *
+ * @param budgets - Array of disruption budgets
+ * @param datetime - The specific datetime to check for
+ * @returns Array of active budgets with their reasons
+ */
+export function calculateAtTimeBudgets(
+  budgets: DisruptionBudget[],
+  datetime: Date
+): AtTimeBudget[] {
+  const affected = getActiveBudgets(budgets, datetime);
+
+  return (
+    [
+      {
+        reason: 'drifted',
+        nodesOrPercentage: getMinimumNodes(affected, 'drifted'),
+      },
+      {
+        reason: 'empty',
+        nodesOrPercentage: getMinimumNodes(affected, 'empty'),
+      },
+      {
+        reason: 'underutilized',
+        nodesOrPercentage: getMinimumNodes(affected, 'underutilized'),
+      },
+    ].filter(atTimeBudget => atTimeBudget.nodesOrPercentage !== '') || []
+  );
+}
+
+/**
+ * return active budgets at the datetime
+ *
+ * @param budgets - Array of disruption budgets
+ * @param datetime - The specific datetime to check for
+ * @returns Array of active budgets
+ */
+function getActiveBudgets(
+  budgets: DisruptionBudget[],
+  datetime: Date
+): DisruptionBudget[] {
+  return budgets.filter(budget => isBudgetActive(budget, datetime));
+}
+
+/**
+ * return the budgets by reason
+ *
+ * @param budgets - Array of disruption budgets
+ * @param reason - The specific reason to get budgets for
+ * @returns Array of budgets
+ */
+function getBudgetsByReason(
+  budgets: DisruptionBudget[],
+  reason: NormalizedDisruptionReason
+): DisruptionBudget[] {
+  return budgets.filter(
+    budget => !budget.reasons || budget.reasons?.includes(reason)
+  );
+}
+
+/**
+ * return whether the budget is activated at the datetime
+ *
+ * @param budgets - Array of disruption budgets
+ * @param datetime - The specific datetime to check for
+ * @returns Array of active budgets
+ */
+function isBudgetActive(budget: DisruptionBudget, datetime: Date): boolean {
+  if (!budget.schedule) return true;
+
+  try {
+    const interval = CronExpressionParser.parse(budget.schedule, {
+      currentDate: datetime,
+      tz: 'UTC',
+    });
+
+    const start = interval.prev().toDate();
+    const duration = parse(budget.duration, 'm') || 0;
+    const end = addMinutes(start, duration);
+
+    return isWithinInterval(datetime, { start, end });
+  } catch (error) {
+    console.error('Error parsing schedule:', error);
+    return false;
+  }
+}
+
+/**
+ * return minimum nodes for budgets
+ *
+ * @param budgets - Array of disruption budgets
+ * @param reason - The specific reason to get minimum nodes for
+ * @returns minimum nodes for budgets
+ */
+export function getMinimumNodes(
+  budgets: DisruptionBudget[],
+  reason: NormalizedDisruptionReason
+): string {
+  const reasonBudgets = getBudgetsByReason(budgets, reason);
+
+  // filter the budget with node is percentage
+  const percentageBudgets = reasonBudgets.filter(budget =>
+    budget.nodes.endsWith('%')
+  );
+  // get the minimum node percentage
+  const percentageNodes = percentageBudgets.map(budget =>
+    parseFloat(budget.nodes.replace('%', ''))
+  );
+  const minNodePercentage =
+    percentageNodes.length > 0
+      ? Math.min(...percentageNodes).toString() + '%'
+      : '';
+
+  // filter the budget with node is integer
+  const integerBudgets = reasonBudgets.filter(
+    budget => !budget.nodes.endsWith('%')
+  );
+  // get the minimum node
+  const integerNodes = integerBudgets.map(budget => parseInt(budget.nodes));
+  const minIntegerNode =
+    integerNodes.length > 0 ? Math.min(...integerNodes).toString() : '';
+
+  return [minIntegerNode, minNodePercentage].filter(Boolean).join(' or ');
 }

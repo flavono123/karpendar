@@ -25,7 +25,7 @@ import {
  * @param index - The index of the budget in NodePool
  * @returns An array of CalendarEvent objects
  */
-export function generateEventsFromBudget(
+export function generateEvents(
   budget: DisruptionBudget,
   index: number,
   range: {
@@ -67,14 +67,18 @@ export function generateEventsFromBudget(
 
   const events: CalendarEvent[] = [];
 
-  const nextInterval = CronExpressionParser.parse(budget.schedule);
-  const prevInterval = CronExpressionParser.parse(budget.schedule);
+  const nextInterval = CronExpressionParser.parse(budget.schedule, {
+    tz: 'UTC',
+  });
+  const prevInterval = CronExpressionParser.parse(budget.schedule, {
+    tz: 'UTC',
+  });
 
   // For next occurrences (forward iteration)
   for (const next of nextInterval) {
     if (next.toDate() > endDate) break;
     events.push(
-      ...eventsByDuration(
+      ...generateEventsByDuration(
         id,
         title,
         description,
@@ -92,7 +96,7 @@ export function generateEventsFromBudget(
   let prev = prevInterval.prev();
   while (prev && prev.toDate() > startDate) {
     events.push(
-      ...eventsByDuration(
+      ...generateEventsByDuration(
         id,
         title,
         description,
@@ -119,7 +123,7 @@ export function generateEventsFromBudget(
  * @param duration - The duration of the event
  * @returns An array of CalendarEvent objects
  */
-function eventsByDuration(
+function generateEventsByDuration(
   id: string,
   title: string,
   description: string,
@@ -175,7 +179,7 @@ function eventsByDuration(
  * @returns the cron interval in minutes
  */
 function getCronInterval(schedule: string): number {
-  const interval = CronExpressionParser.parse(schedule);
+  const interval = CronExpressionParser.parse(schedule, { tz: 'UTC' });
   // negate from next minus to next next occurrence
   return -differenceInMinutes(
     interval.next().toDate(),
@@ -190,7 +194,7 @@ function getCronInterval(schedule: string): number {
  */
 function validateSchedule(schedule: string): boolean {
   try {
-    CronExpressionParser.parse(schedule);
+    CronExpressionParser.parse(schedule, { tz: 'UTC' });
     return true;
   } catch (error) {
     console.error(`Error parsing schedule: ${schedule}`, error);

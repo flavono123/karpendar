@@ -28,19 +28,19 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
     budgets:
       - nodes: "1"
-      - duration: 1h
+      - duration: 4h
         nodes: "0"
         schedule: 0 15 * * *
         reasons:
           - drifted
-      - duration: 1h
-        nodes: 10%
-        schedule: 0 16 * * *
+      - duration: 3h
+        nodes: 30%
+        schedule: 0 17 * * *
         reasons:
           - empty
-      - duration: 1h
-        nodes: "3"
-        schedule: 0 17 * * *
+      - duration: 3h
+        nodes: "15%"
+        schedule: 0 22 * * *
         reasons:
           - underutilized
 `;
@@ -70,7 +70,7 @@ export default function Home() {
     if (!nodePool || !nodePool.spec?.disruption?.budgets) {
       setNotification({
         visible: true,
-        reason: 'The NodePool has no disruption budgets.',
+        reason: 'Invalid NodePool configuration',
         guide: 'Please enter a valid NodePool YAML configuration.',
         type: 'error',
       });

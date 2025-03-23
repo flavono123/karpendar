@@ -7,6 +7,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import DateTimeModal from '../components/DateTimeModal';
 import * as awsui from '@cloudscape-design/design-tokens/index.js';
+import { DisruptionBudget } from '../types/karpenter';
 
 class DateTimeIndicatorWithCloudscapeModalPluginImpl {
   name = 'datetimeIndicatorWithCloudscapeModal';
@@ -16,6 +17,7 @@ class DateTimeIndicatorWithCloudscapeModalPluginImpl {
   private modalRoot: any = null;
   private modalContainer: HTMLDivElement | null = null;
   private indicatorElement: HTMLDivElement | null = null;
+  private budgets: DisruptionBudget[] = [];
 
   onRender($app: CalendarAppSingleton): void {
     this.$app = $app;
@@ -36,6 +38,10 @@ class DateTimeIndicatorWithCloudscapeModalPluginImpl {
     this.datetime = date;
     this.setIndicator();
     this.renderModal();
+  }
+
+  public setBudgets(budgets: DisruptionBudget[]) {
+    this.budgets = budgets;
   }
 
   public toggleModal() {
@@ -90,7 +96,7 @@ class DateTimeIndicatorWithCloudscapeModalPluginImpl {
   };
 
   private renderModal() {
-    if (!this.modalRoot) return;
+    if (!this.modalRoot || !this.datetime) return;
 
     let position = null;
     if (this.indicatorElement) {
@@ -111,6 +117,7 @@ class DateTimeIndicatorWithCloudscapeModalPluginImpl {
           this.renderModal();
         }}
         getIndicatorElement={this.getIndicatorElement}
+        budgets={this.budgets}
       />
     );
   }

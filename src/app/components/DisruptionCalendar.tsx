@@ -14,7 +14,7 @@ import Box from '@cloudscape-design/components/box';
 
 import './DisruptionCalendar.css';
 import { DisruptionBudget } from '../types/karpenter';
-import { generateEventsFromBudget } from '../utils/cronParser';
+import { generateEvents } from '../utils/cronParser';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { StatusIndicator } from '@cloudscape-design/components';
 import { createDateTimeIndicatorWithCloudscapeModalPlugin } from '../plugins/datetime-indicator-with-modal-plugin';
@@ -98,6 +98,13 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
     end: endOfMonth(today),
   });
 
+  useEffect(() => {
+    const datetimeIndicator = datetimeIndicatorPluginRef.current;
+    if (datetimeIndicator && datetimeIndicator.setBudgets && budgets) {
+      datetimeIndicator.setBudgets(budgets);
+    }
+  }, [budgets]);
+
   const calendarApp = useNextCalendarApp({
     selectedDate: toDateString(new Date()),
     views: [
@@ -156,7 +163,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
     try {
       const plugin = eventsPluginRef.current;
       const events = budgets.flatMap((budget, index) =>
-        generateEventsFromBudget(budget, index, visiableRange)
+        generateEvents(budget, index, visiableRange)
       );
       plugin.set(events);
     } catch (error) {

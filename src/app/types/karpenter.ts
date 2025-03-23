@@ -1,18 +1,25 @@
-export type DisruptionReason = 'Empty' | 'Drifted' | 'Underutilized';
+export type DisruptionReason =
+  | 'Empty'
+  | 'Drifted'
+  | 'Underutilized'
+  | 'drifted'
+  | 'empty'
+  | 'underutilized';
+export type NormalizedDisruptionReason = 'empty' | 'drifted' | 'underutilized';
 
 export interface DisruptionBudget {
   nodes: string; // Can be a percentage like "20%" or a number like "5"
-  reasons?: DisruptionReason[];
+  reasons?: NormalizedDisruptionReason[];
   schedule?: string; // Cron expression or special macros like "@daily"
   duration?: string; // Duration string like "10m" or "24h"
 }
 
 export interface NodePoolDisruption {
-  budgets: DisruptionBudget[];
+  budgets?: DisruptionBudget[];
 }
 
 export interface NodePoolSpec {
-  disruption: NodePoolDisruption;
+  disruption?: NodePoolDisruption;
 }
 
 export interface NodePool {
@@ -24,15 +31,19 @@ export interface NodePool {
   spec: NodePoolSpec;
 }
 
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-  allDay?: boolean;
-  resource?: {
-    reason: DisruptionReason | 'All';
-    nodes: string;
-    budget: DisruptionBudget;
-  };
+export interface AtTimeBudget {
+  nodesOrPercentage: string;
+  reason: NormalizedDisruptionReason;
+}
+
+interface UnnormalizedDisruptionBudget extends DisruptionBudget {
+  reason?: DisruptionReason;
+}
+
+interface UnnormalizedNodePoolSpec extends NodePoolSpec {
+  budgets?: UnnormalizedDisruptionBudget[];
+}
+
+export interface UnnormalizedNodePool extends NodePool {
+  spec: UnnormalizedNodePoolSpec;
 }

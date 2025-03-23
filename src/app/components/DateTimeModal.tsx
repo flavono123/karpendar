@@ -1,4 +1,16 @@
+import _ from 'lodash';
+
+import {
+  Box,
+  StatusIndicator,
+  TextContent,
+  SpaceBetween,
+} from '@cloudscape-design/components';
 import React, { useEffect, useRef, useState } from 'react';
+
+import * as awsui from '@cloudscape-design/design-tokens/index.js';
+import { DisruptionBudget } from '../types/karpenter';
+import { calculateAtTimeBudgets } from '../utils/budgetHelpers';
 
 interface DateTimeModalProps {
   datetime: Date | null;
@@ -6,6 +18,7 @@ interface DateTimeModalProps {
   isOpen: boolean;
   onClose: () => void;
   getIndicatorElement?: () => HTMLElement | null; // Function to get the current indicator element
+  budgets: DisruptionBudget[];
 }
 
 const DateTimeModal: React.FC<DateTimeModalProps> = ({
@@ -14,9 +27,17 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
   isOpen,
   onClose,
   getIndicatorElement,
+  budgets,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState(initialPosition);
+  const [statuses, setStatuses] = useState<
+    {
+      reasonString: string;
+      nodesOrPercentage: string;
+      type: 'success' | 'warning' | 'error';
+    }[]
+  >([]);
 
   // Update position when scrolling or resizing
   useEffect(() => {
@@ -33,10 +54,8 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
       }
     };
 
-    // Set initial position
     updatePosition();
 
-    // Add scroll and resize event listeners
     window.addEventListener('scroll', updatePosition, true);
     window.addEventListener('resize', updatePosition);
 
@@ -47,7 +66,6 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
   }, [isOpen, getIndicatorElement]);
 
   useEffect(() => {
-    // Handle clicks outside the modal
     const handleClickOutside = (event: MouseEvent) => {
       if (
         modalRef.current &&
@@ -66,47 +84,76 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen || !position) return null;
+  useEffect(() => {
+    if (!datetime) return;
+    const atTimeBudgets = calculateAtTimeBudgets(budgets, datetime);
+    const groups = _.groupBy(atTimeBudgets, 'nodesOrPercentage');
+    setStatuses(
+      Object.keys(groups).map(nodesOrPercentage => {
+        const reasonString = groups[nodesOrPercentage]
+          .map(
+            atTimeBudget =>
+              atTimeBudget.reason.charAt(0).toUpperCase() +
+              atTimeBudget.reason.slice(1)
+          )
+          .sort()
+          .join(', ');
+
+        const type = nodesOrPercentage === '0' ? 'error' : 'success';
+
+        if (reasonString === 'Drifted, Empty, Underutilized') {
+          return {
+            reasonString: 'All',
+            nodesOrPercentage: nodesOrPercentage,
+            type,
+          };
+        }
+
+        return {
+          reasonString,
+          nodesOrPercentage: nodesOrPercentage,
+          type,
+        };
+      })
+    );
+  }, [budgets, datetime]);
+
+  if (!isOpen || !position || !datetime) return null;
 
   return (
-    <div
-      ref={modalRef}
-      className="sx__datetime-modal"
-      style={{
-        position: 'fixed', // Changed from 'absolute' to 'fixed' to stay in view when scrolling
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-        backgroundColor: 'white',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-        borderRadius: '4px',
-        padding: '12px',
-        minWidth: '200px',
-        zIndex: 1000,
-      }}
-    >
-      <div className="sx__datetime-modal-header">
-        <h3>
-          {datetime?.toLocaleTimeString()} on {datetime?.toLocaleDateString()}
-        </h3>
-        <button
-          onClick={onClose}
+    <>
+      {statuses.length > 0 && (
+        <div
+          ref={modalRef}
+          className="sx__datetime-modal"
           style={{
-            position: 'absolute',
-            top: '8px',
-            right: '8px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
+            position: 'fixed', // for fixing when scrolling
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+            backgroundColor: awsui.colorBackgroundPopover,
+            boxShadow: awsui.shadowContainerActive,
+            borderRadius: '4px',
+            padding: '12px',
+            minWidth: '240px',
           }}
         >
-          ×
-        </button>
-      </div>
-      <div className="sx__datetime-modal-content">
-        {/* Add your custom content or Cloudscape components here */}
-        <p>Your custom modal content here</p>
-      </div>
-    </div>
+          <Box>
+            <TextContent>
+              <SpaceBetween size="xs">
+                {statuses.map(status => (
+                  <StatusIndicator
+                    key={status.nodesOrPercentage}
+                    type={status.type}
+                  >
+                    {`${status.nodesOrPercentage} for ${status.reasonString}`}
+                  </StatusIndicator>
+                ))}
+              </SpaceBetween>
+            </TextContent>
+          </Box>
+        </div>
+      )}
+    </>
   );
 };
 
