@@ -67,9 +67,7 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
       // Add multiplying factors to prioritize certain positions
       // These factors make the algorithm more sensitive to edge proximity
       const spaceRightFactor = spaceRight * 0.3; // Reduce right priority slightly
-      const spaceLeftFactor = spaceLeft * 0.3;
       const spaceBelowFactor = spaceBelow * 0.3; // Reduce bottom priority slightly
-      const spaceAboveFactor = spaceAbove * 0.3;
 
       // Default position (right of indicator)
       let top = indicatorRect.top + SPACING;

@@ -49,7 +49,7 @@ const YamlEditor: React.FC<YamlEditorProps> = ({
       if (onYamlChange) {
         onYamlChange(yaml);
       }
-    } catch (err) {
+    } catch {
       onChange(null);
     }
   }, [yaml, onChange, onYamlChange]);
