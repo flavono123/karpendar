@@ -143,15 +143,15 @@ export function calculateAtTimeBudgets(
   return (
     [
       {
-        reason: 'drifted',
+        reason: 'drifted' as NormalizedDisruptionReason,
         nodesOrPercentage: getMinimumNodes(affected, 'drifted'),
       },
       {
-        reason: 'empty',
+        reason: 'empty' as NormalizedDisruptionReason,
         nodesOrPercentage: getMinimumNodes(affected, 'empty'),
       },
       {
-        reason: 'underutilized',
+        reason: 'underutilized' as NormalizedDisruptionReason,
         nodesOrPercentage: getMinimumNodes(affected, 'underutilized'),
       },
     ].filter(atTimeBudget => atTimeBudget.nodesOrPercentage !== '') || []
