@@ -18,6 +18,7 @@ class DateTimeIndicatorWithCloudscapeModalPluginImpl {
   private modalContainer: HTMLDivElement | null = null;
   private indicatorElement: HTMLDivElement | null = null;
   private budgets: DisruptionBudget[] = [];
+  private calendarElement: HTMLElement | null = null;
 
   onRender($app: CalendarAppSingleton): void {
     this.$app = $app;
@@ -42,6 +43,10 @@ class DateTimeIndicatorWithCloudscapeModalPluginImpl {
 
   public setBudgets(budgets: DisruptionBudget[]) {
     this.budgets = budgets;
+  }
+
+  public setCalendarElement(element: HTMLElement) {
+    this.calendarElement = element;
   }
 
   public toggleModal() {

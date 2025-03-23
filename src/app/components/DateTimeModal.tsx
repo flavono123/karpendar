@@ -17,7 +17,8 @@ interface DateTimeModalProps {
   position: { top: number; left: number } | null;
   isOpen: boolean;
   onClose: () => void;
-  getIndicatorElement?: () => HTMLElement | null; // Function to get the current indicator element
+  getIndicatorElement?: () => HTMLElement | null;
+  getCalendarElement?: () => HTMLElement | null;
   budgets: DisruptionBudget[];
 }
 
@@ -45,16 +46,83 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
 
     const updatePosition = () => {
       const indicatorElement = getIndicatorElement();
-      if (indicatorElement) {
-        const rect = indicatorElement.getBoundingClientRect();
-        setPosition({
-          top: rect.top,
-          left: rect.right + 20, // Position to the right of the indicator with some spacing
-        });
+      if (!indicatorElement || !modalRef.current) return;
+
+      const indicatorRect = indicatorElement.getBoundingClientRect();
+      const modalRect = modalRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Constants
+      const SPACING = 10;
+      const modalWidth = modalRect.width || 240; // Default width from styles
+      const modalHeight = modalRect.height || 100; // Default minimum height
+
+      // Calculate available space in each direction
+      const spaceRight = viewportWidth - indicatorRect.right - SPACING;
+      const spaceLeft = indicatorRect.left - SPACING;
+      const spaceBelow = viewportHeight - indicatorRect.bottom - SPACING;
+      const spaceAbove = indicatorRect.top - SPACING;
+
+      // Add multiplying factors to prioritize certain positions
+      // These factors make the algorithm more sensitive to edge proximity
+      const spaceRightFactor = spaceRight * 0.3; // Reduce right priority slightly
+      const spaceLeftFactor = spaceLeft * 0.3;
+      const spaceBelowFactor = spaceBelow * 0.3; // Reduce bottom priority slightly
+      const spaceAboveFactor = spaceAbove * 0.3;
+
+      // Default position (right of indicator)
+      let top = indicatorRect.top + SPACING;
+      let left = indicatorRect.right + SPACING;
+
+      // Determine horizontal position - always left or right, never center
+      if (spaceRight < modalWidth || spaceRightFactor < modalWidth) {
+        // Not enough space on right, try to position left
+        left = indicatorRect.left - modalWidth - SPACING;
       }
+
+      // If left positioning would place modal outside viewport, force right positioning
+      // but adjust to keep within bounds
+      if (left < SPACING) {
+        left = Math.min(
+          indicatorRect.right + SPACING,
+          viewportWidth - modalWidth - SPACING
+        );
+      }
+
+      // Determine vertical position - always top or bottom, never center vertically
+      if (spaceBelow < modalHeight || spaceBelowFactor < modalHeight) {
+        // Not enough space below, try to position above
+        top = indicatorRect.top - modalHeight - SPACING;
+      } else {
+        // Position below the indicator
+        top = indicatorRect.bottom + SPACING;
+      }
+
+      // If top positioning would place modal outside viewport, force bottom positioning
+      // but adjust to keep within bounds
+      if (top < SPACING) {
+        top = Math.min(
+          indicatorRect.bottom + SPACING,
+          viewportHeight - modalHeight - SPACING
+        );
+      }
+
+      // Ensure modal stays within viewport bounds
+      top = Math.max(
+        SPACING,
+        Math.min(top, viewportHeight - modalHeight - SPACING)
+      );
+      left = Math.max(
+        SPACING,
+        Math.min(left, viewportWidth - modalWidth - SPACING)
+      );
+
+      setPosition({ top, left });
     };
 
-    updatePosition();
+    // Initial position update needs a small delay to ensure modal DOM is ready
+    setTimeout(updatePosition, 0);
 
     window.addEventListener('scroll', updatePosition, true);
     window.addEventListener('resize', updatePosition);
