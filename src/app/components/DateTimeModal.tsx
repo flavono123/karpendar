@@ -184,6 +184,42 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
     );
   }, [budgets, datetime]);
 
+  // Format datetime into absolute timestamp with minutes precision
+  const formatAbsoluteTimestamp = (date: Date) => {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+
+    // Format time with leading zeros for hours and minutes
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    // Get timezone offset in format UTC±h:mm
+    const tzOffset = date.getTimezoneOffset();
+    const tzSign = tzOffset <= 0 ? '+' : '-';
+    const tzHours = Math.floor(Math.abs(tzOffset) / 60)
+      .toString()
+      .padStart(2, '0');
+    const tzMinutes = (Math.abs(tzOffset) % 60).toString().padStart(2, '0');
+
+    return `${month} ${day}, ${year}, ${hours}:${minutes} (UTC${tzSign}${tzHours}:${tzMinutes})`;
+  };
+
   if (!isOpen || !position || !datetime) return null;
 
   return (
@@ -214,6 +250,15 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
                     {`${status.nodesOrPercentage} for ${status.reasonString}`}
                   </StatusIndicator>
                 ))}
+                <div
+                  style={{
+                    fontSize: awsui.fontSizeBodyS,
+                    color: awsui.colorTextBodySecondary,
+                    marginTop: awsui.spaceScaledXs,
+                  }}
+                >
+                  {formatAbsoluteTimestamp(datetime)}
+                </div>
               </SpaceBetween>
             </TextContent>
           </Box>
