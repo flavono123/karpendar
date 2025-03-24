@@ -120,7 +120,7 @@ export default function Home() {
               header={
                 <Header
                   variant="h1"
-                  description="Visualize Karpenter NodePool Disruption Budgets"
+                  description="A calendar view of Karpenter NodePool Disruption Budgets"
                   info={
                     <Link
                       external

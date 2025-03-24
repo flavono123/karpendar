@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { pretendard, notoSans, notoSansKR } from "./fonts";
-import "@cloudscape-design/global-styles/index.css";
+import type { Metadata } from 'next';
+import './globals.css';
+import '@cloudscape-design/global-styles/index.css';
 
 export const metadata: Metadata = {
-  title: "Karpendar - Karpenter NodePool Disruption Budget Visualizer",
-  description: "Visualize AWS Karpenter NodePool Disruption Budgets in a human-readable format",
+  title: 'Karpendar',
+  description: 'A calendar view of Karpenter NodePool Disruption Budgets',
 };
 
 export default function RootLayout({
@@ -15,11 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        // className={`${pretendard.variable} ${notoSans.variable} ${notoSansKR.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
