@@ -31,18 +31,18 @@ spec:
         nodes: "0"
         schedule: 0 15 * * mon-fri
         reasons:
-          - drifted
+          - Drifted
       - nodes: "1"
       - duration: 3h
         nodes: 30%
         schedule: 0 17 * * *
         reasons:
-          - empty
+          - Empty
       - duration: 3h
         nodes: "15%"
         schedule: 0 22 * * *
         reasons:
-          - underutilized
+          - Underutilized
 `;
 
 export default function Home() {

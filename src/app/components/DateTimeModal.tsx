@@ -157,11 +157,7 @@ const DateTimeModal: React.FC<DateTimeModalProps> = ({
     setStatuses(
       Object.keys(groups).map(nodesOrPercentage => {
         const reasonString = groups[nodesOrPercentage]
-          .map(
-            atTimeBudget =>
-              atTimeBudget.reason.charAt(0).toUpperCase() +
-              atTimeBudget.reason.slice(1)
-          )
+          .map(atTimeBudget => atTimeBudget.reason)
           .sort()
           .join(', ');
 

@@ -29,7 +29,7 @@ interface DisruptionCalendarProps {
 const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
   const today = new Date();
   const calendars = {
-    all: {
+    All: {
       colorName: 'blue',
       lightColors: {
         main: awsui.colorChartsPaletteCategorical1,
@@ -37,7 +37,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         onContainer: awsui.colorChartsPaletteCategorical6,
       },
     },
-    drifted: {
+    Drifted: {
       colorName: 'pink',
       lightColors: {
         main: awsui.colorChartsPaletteCategorical2,
@@ -45,7 +45,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         onContainer: awsui.colorChartsPaletteCategorical7,
       },
     },
-    empty: {
+    Empty: {
       colorName: 'teal',
       lightColors: {
         main: awsui.colorChartsPaletteCategorical3,
@@ -53,7 +53,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         onContainer: awsui.colorChartsPaletteCategorical8,
       },
     },
-    underutilized: {
+    Underutilized: {
       colorName: 'purple',
       lightColors: {
         main: awsui.colorChartsPaletteCategorical4,
@@ -61,7 +61,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         onContainer: awsui.colorChartsPaletteCategorical9,
       },
     },
-    'drifted-empty': {
+    'Drifted-Empty': {
       colorName: 'navy',
       lightColors: {
         main: awsui.colorChartsPaletteCategorical11,
@@ -69,7 +69,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         onContainer: awsui.colorChartsPaletteCategorical16,
       },
     },
-    'empty-underutilized': {
+    'Empty-Underutilized': {
       colorName: 'mauve',
       lightColors: {
         main: awsui.colorChartsPaletteCategorical22,
@@ -77,7 +77,7 @@ const DisruptionCalendar: React.FC<DisruptionCalendarProps> = ({ budgets }) => {
         onContainer: awsui.colorChartsPaletteCategorical27,
       },
     },
-    'drifted-underutilized': {
+    'Drifted-Underutilized': {
       colorName: 'magenta',
       lightColors: {
         main: awsui.colorChartsPaletteCategorical24,

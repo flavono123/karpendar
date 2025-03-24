@@ -3,7 +3,6 @@ import {
   AtTimeBudget,
   DisruptionBudget,
   DisruptionReason,
-  NormalizedDisruptionReason,
 } from '../types/karpenter';
 import { describeCronSchedule } from './cronParser';
 import { CronExpressionParser } from 'cron-parser';
@@ -101,12 +100,7 @@ export function humanReadableBudget(budget: DisruptionBudget): string {
 // for debugging
 export function generateLocation(budget: DisruptionBudget): string {
   if (!budget.reasons) return 'All';
-  const reasonString = budget.reasons
-    .map(
-      reason => reason.charAt(0).toUpperCase() + reason.slice(1).toLowerCase()
-    )
-    .sort()
-    .join(', ');
+  const reasonString = budget.reasons.sort().join(', ');
   if (reasonString === 'Drifted, Empty, Underutilized') {
     return 'All';
   }
@@ -114,14 +108,11 @@ export function generateLocation(budget: DisruptionBudget): string {
 }
 
 export function generateCalendarId(budget: DisruptionBudget): string {
-  if (!budget.reasons) return 'all';
-  const calendarId = budget.reasons
-    .map(reason => reason.toLowerCase())
-    .sort()
-    .join('-');
+  if (!budget.reasons) return 'All';
+  const calendarId = budget.reasons.sort().join('-');
 
-  if (calendarId == 'drifted-empty-underutilized') {
-    return 'all';
+  if (calendarId === 'Drifted-Empty-Underutilized') {
+    return 'All';
   }
 
   return calendarId;
@@ -143,16 +134,16 @@ export function calculateAtTimeBudgets(
   return (
     [
       {
-        reason: 'drifted' as NormalizedDisruptionReason,
-        nodesOrPercentage: getMinimumNodes(affected, 'drifted'),
+        reason: 'Drifted' as DisruptionReason,
+        nodesOrPercentage: getMinimumNodes(affected, 'Drifted'),
       },
       {
-        reason: 'empty' as NormalizedDisruptionReason,
-        nodesOrPercentage: getMinimumNodes(affected, 'empty'),
+        reason: 'Empty' as DisruptionReason,
+        nodesOrPercentage: getMinimumNodes(affected, 'Empty'),
       },
       {
-        reason: 'underutilized' as NormalizedDisruptionReason,
-        nodesOrPercentage: getMinimumNodes(affected, 'underutilized'),
+        reason: 'Underutilized' as DisruptionReason,
+        nodesOrPercentage: getMinimumNodes(affected, 'Underutilized'),
       },
     ].filter(atTimeBudget => atTimeBudget.nodesOrPercentage !== '') || []
   );
@@ -181,7 +172,7 @@ function getActiveBudgets(
  */
 function getBudgetsByReason(
   budgets: DisruptionBudget[],
-  reason: NormalizedDisruptionReason
+  reason: DisruptionReason
 ): DisruptionBudget[] {
   return budgets.filter(
     budget => !budget.reasons || budget.reasons?.includes(reason)
@@ -224,7 +215,7 @@ function isBudgetActive(budget: DisruptionBudget, datetime: Date): boolean {
  */
 export function getMinimumNodes(
   budgets: DisruptionBudget[],
-  reason: NormalizedDisruptionReason
+  reason: DisruptionReason
 ): string {
   const reasonBudgets = getBudgetsByReason(budgets, reason);
 

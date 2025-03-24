@@ -1,15 +1,8 @@
-export type DisruptionReason =
-  | 'Empty'
-  | 'Drifted'
-  | 'Underutilized'
-  | 'drifted'
-  | 'empty'
-  | 'underutilized';
-export type NormalizedDisruptionReason = 'empty' | 'drifted' | 'underutilized';
+export type DisruptionReason = 'Empty' | 'Drifted' | 'Underutilized';
 
 export interface DisruptionBudget {
   nodes: string; // Can be a percentage like "20%" or a number like "5"
-  reasons?: NormalizedDisruptionReason[];
+  reasons?: DisruptionReason[];
   schedule?: string; // Cron expression or special macros like "@daily"
   duration?: string; // Duration string like "10m" or "24h"
 }
@@ -33,17 +26,5 @@ export interface NodePool {
 
 export interface AtTimeBudget {
   nodesOrPercentage: string;
-  reason: NormalizedDisruptionReason;
-}
-
-interface UnnormalizedDisruptionBudget extends DisruptionBudget {
-  reason?: DisruptionReason;
-}
-
-interface UnnormalizedNodePoolSpec extends NodePoolSpec {
-  budgets?: UnnormalizedDisruptionBudget[];
-}
-
-export interface UnnormalizedNodePool extends NodePool {
-  spec: UnnormalizedNodePoolSpec;
+  reason: DisruptionReason;
 }
